@@ -37,7 +37,7 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/controls/OrbitControls.js"></script>
   <script>
-  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRw6EJ-hXUfwsx9h-foWoI6CEdXz0rNyyjzUqL0GnUI9MzDo1J4WNmTRoaT1niFPYc5c-MPjDGMtOxO/pub?output=csv";
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/2PACX-1vRw6EJ-hXUfwsx9h-foWoI6CEdXz0rNyyjzUqL0GnUI9MzDo1J4WNmTRoaT1niFPYc5c-MPjDGMtOxO/gviz/tq?tqx=out:csv";
     let pneus = [], original = null, simulado = null;
 
     const aroSel = document.getElementById('aro');
@@ -116,7 +116,7 @@ console.log("Pneus carregados:", pneus);
     let pneuOriginalMesh = null, pneuSimuladoMesh = null;
     const viewer = document.getElementById('viewer');
 
-    initThreeJS();
+    window.addEventListener('load', initThreeJS);
     function initThreeJS() {
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(50, viewer.clientWidth / viewer.clientHeight, 1, 2000);
