@@ -37,7 +37,7 @@
   <script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/controls/OrbitControls.js"></script>
-
+<script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRw6EJ-hXUfwsx9h-foWoI6CEdXz0rNyyjzUqL0GnUI9MzDo1J4WNmTRoaT1niFPYc5c-MPjDGMtOxO/pub?output=csv";
     let pneus = [], original = null, simulado = null;
 
@@ -83,7 +83,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRw6EJ-hXUfwsx9
   console.log("Conteúdo CSV:", text);
       const linhas = text.trim().split('\n');
       linhas.shift();
-      pneus = linhas.map(l => l.split(';'))
+pneus = linhas.map(l => l.split(','))
   .filter(c => c.length >= 17 && !isNaN(parseInt(c[4])))
   .map(c => ({
     categoria: c[0], radial: c[1], cg: c[2], v: c[3],
