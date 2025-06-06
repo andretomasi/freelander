@@ -118,7 +118,7 @@ console.log("Pneus carregados:", pneus);
     let pneuOriginalMesh = null, pneuSimuladoMesh = null;
     const viewer = document.getElementById('viewer');
 
-    window.addEventListener('load', initThreeJS);
+    
     function initThreeJS() {
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(50, viewer.clientWidth / viewer.clientHeight, 1, 2000);
@@ -173,6 +173,7 @@ console.log("Pneus carregados:", pneus);
       camera.updateProjectionMatrix();
       renderer.setSize(viewer.clientWidth, viewer.clientHeight);
     });
-  </script>
-</body>
+  window.addEventListener('load', initThreeJS);
+
+$1
 </html>
