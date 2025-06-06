@@ -86,8 +86,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRw6EJ-hXUfwsx9
 pneus = linhas.map(l => l.split(','))
 .filter(c => c.length >= 17 && !isNaN(parseInt(c[4].replace(/[^\d]/g, ''))))
   .map(c => ({
-    categoria: c[0], radial: c[1], cg: c[2], v: c[3],
-    aro: parseInt(c[4]), largura: parseInt(c[1]), altura: parseInt(c[2]),
+    categoria: c[0], largura: parseInt(c[1]), altura: parseInt(c[2]), radial: c[3], aro: parseInt(c[4]), cg: c[5], v: c[6],
     diametro_mm: parseFloat(c[7]), diametro_pol: parseFloat(c[8]), largura_pol: parseFloat(c[9]),
     larg_or: parseInt(c[10]), alt_or: parseInt(c[11]), dia_or: parseFloat(c[12]),
     dif_larg: parseFloat(c[13]), dif_alt: parseFloat(c[14]), esp: c[15], id: c[16]
