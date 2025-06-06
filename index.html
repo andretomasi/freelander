@@ -87,7 +87,7 @@ pneus = linhas.map(l => l.split(','))
   .filter(c => c.length >= 17 && !isNaN(parseInt(c[4])))
   .map(c => ({
     categoria: c[0], radial: c[1], cg: c[2], v: c[3],
-    aro: parseInt(c[4]), largura: parseInt(c[5]), altura: parseInt(c[6]),
+    aro: parseInt(c[4]), largura: parseInt(c[1]), altura: parseInt(c[2]),
     diametro_mm: parseFloat(c[7]), diametro_pol: parseFloat(c[8]), largura_pol: parseFloat(c[9]),
     larg_or: parseInt(c[10]), alt_or: parseInt(c[11]), dia_or: parseFloat(c[12]),
     dif_larg: parseFloat(c[13]), dif_alt: parseFloat(c[14]), esp: c[15], id: c[16]
