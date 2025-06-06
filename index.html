@@ -2,92 +2,164 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Visualizador 3D de Pneus</title>
+  <title>Comparador de Pneus 3D</title>
   <style>
-    body { margin: 0; overflow: hidden; background-color: #111; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; }
+    #interface { width: 35%; background: #f7f7f7; padding: 20px; overflow-y: auto; }
+    #interface h2 { margin-top: 0; }
+    label { display: block; margin: 10px 0 5px; }
+    select, button { width: 100%; padding: 8px; margin-bottom: 10px; font-size: 1rem; }
+    button { background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    #viewer { flex: 1; background: #111; }
     canvas { display: block; }
   </style>
 </head>
 <body>
+  <div id="interface">
+    <h2>Pneu Original</h2>
+    <label for="aro">Aro:</label>
+    <select id="aro"></select>
+
+    <h2>Pneu Simulado</h2>
+    <label for="largura">Largura:</label>
+    <select id="largura"></select>
+
+    <label for="altura">Altura:</label>
+    <select id="altura"></select>
+
+    <button id="btnComparar" disabled>Comparar Pneus</button>
+  </div>
+  <div id="viewer"></div>
+
   <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/controls/OrbitControls.js"></script>
-
   <script>
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRw6EJ-hXUfwsx9h-foWoI6CEdXz0rNyyjzUqL0GnUI9MzDo1J4WNmTRoaT1niFPYc5c-MPjDGMtOxO/pub?output=csv";
+    let pneus = [], original = null, simulado = null;
+
+    const aroSel = document.getElementById('aro');
+    const larguraSel = document.getElementById('largura');
+    const alturaSel = document.getElementById('altura');
+    const btn = document.getElementById('btnComparar');
+
+    function populaSelect(select, opcoes) {
+      select.innerHTML = '';
+      opcoes.forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+      });
+    }
+
+    function getUnicos(arr, chave) {
+      return [...new Set(arr.map(p => p[chave]))].sort((a, b) => a - b);
+    }
+
+    function encontrarOriginal(aro) {
+      return pneus.find(p => p.aro == aro && p.largura == p.larg_or && p.altura == p.alt_or);
+    }
+
+    function montarID(p) {
+      return `${p.aro}-${p.largura}-${p.altura}`;
+    }
+
+    function atualizarEstado() {
+      const key = montarID({ aro: aroSel.value, largura: larguraSel.value, altura: alturaSel.value });
+      simulado = pneus.find(p => p.id === key);
+      btn.disabled = !simulado;
+    }
+
+    btn.onclick = () => {
+      if (!original || !simulado) return;
+      desenharPneus(original, simulado);
+    }
+
+    fetch(CSV_URL).then(r => r.text()).then(text => {
+      const linhas = text.trim().split('\n');
+      linhas.shift();
+      pneus = linhas.map(l => l.split(';'))
+  .filter(c => c.length >= 17 && !isNaN(parseInt(c[4])))
+  .map(c => ({
+    categoria: c[0], radial: c[1], cg: c[2], v: c[3],
+    aro: parseInt(c[4]), largura: parseInt(c[5]), altura: parseInt(c[6]),
+    diametro_mm: parseFloat(c[7]), diametro_pol: parseFloat(c[8]), largura_pol: parseFloat(c[9]),
+    larg_or: parseInt(c[10]), alt_or: parseInt(c[11]), dia_or: parseFloat(c[12]),
+    dif_larg: parseFloat(c[13]), dif_alt: parseFloat(c[14]), esp: c[15], id: c[16]
+  }));
+
+console.log("Pneus carregados:", pneus);
+
+      populaSelect(aroSel, getUnicos(pneus, 'aro'));
+      aroSel.onchange = () => {
+        const aro = parseInt(aroSel.value);
+        original = encontrarOriginal(aro);
+        const larguras = getUnicos(pneus.filter(p => p.aro === aro), 'largura');
+        populaSelect(larguraSel, larguras);
+        larguraSel.onchange();
+      };
+      larguraSel.onchange = () => {
+        const aro = parseInt(aroSel.value);
+        const largura = parseInt(larguraSel.value);
+        const alturas = getUnicos(pneus.filter(p => p.aro === aro && p.largura === largura), 'altura');
+        populaSelect(alturaSel, alturas);
+        alturaSel.onchange();
+      };
+      alturaSel.onchange = () => atualizarEstado();
+      aroSel.onchange();
+    });
+
     let scene, camera, renderer, controls;
+    let pneuOriginalMesh = null, pneuSimuladoMesh = null;
+    const viewer = document.getElementById('viewer');
 
-    init();
-    animate();
-
-    function init() {
+    initThreeJS();
+    function initThreeJS() {
       scene = new THREE.Scene();
-
-      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 2000);
+      camera = new THREE.PerspectiveCamera(50, viewer.clientWidth / viewer.clientHeight, 1, 2000);
       camera.position.set(0, 0, 800);
-
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
+      renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+      viewer.appendChild(renderer.domElement);
       controls = new THREE.OrbitControls(camera, renderer.domElement);
-
-      // Luz ambiente e de direção
       scene.add(new THREE.AmbientLight(0xffffff, 0.6));
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(500, 500, 500);
       scene.add(dirLight);
-
-      // Carregar eixo.glb
       const loader = new THREE.GLTFLoader();
       loader.load("https://raw.githubusercontent.com/andretomasi/freelander/main/eixo.glb", gltf => {
         gltf.scene.position.set(0, 0, 0);
         scene.add(gltf.scene);
       });
+      animate();
     }
 
     function criarPneu(raio_mm, largura_mm, cor, opacidade, texturaUrl = null) {
-      const geometria = new THREE.CylinderGeometry(raio_mm, raio_mm, largura_mm, 64, 1, true);
+      const geo = new THREE.CylinderGeometry(raio_mm, raio_mm, largura_mm, 64, 1, true);
       let material;
-
       if (texturaUrl) {
         const textura = new THREE.TextureLoader().load(texturaUrl);
-        material = new THREE.MeshStandardMaterial({
-          map: textura,
-          metalness: 0.2,
-          roughness: 0.8,
-          side: THREE.DoubleSide
-        });
+        material = new THREE.MeshStandardMaterial({ map: textura, metalness: 0.2, roughness: 0.8, side: THREE.DoubleSide });
       } else {
-        material = new THREE.MeshStandardMaterial({
-          color: cor,
-          transparent: opacidade < 1,
-          opacity: opacidade,
-          side: THREE.DoubleSide
-        });
+        material = new THREE.MeshStandardMaterial({ color: cor, transparent: opacidade < 1, opacity: opacidade, side: THREE.DoubleSide });
       }
-
-      const pneu = new THREE.Mesh(geometria, material);
-      pneu.rotation.x = Math.PI / 2;
-      pneu.position.set(0, 0, largura_mm / 2); // parte traseira do pneu no Z=0
-      return pneu;
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(0, 0, largura_mm / 2);
+      return mesh;
     }
 
-    let pneuOriginalMesh = null;
-    let pneuSimuladoMesh = null;
-
-    window.addEventListener("message", event => {
-      const { original, simulado } = event.data;
-
+    function desenharPneus(original, simulado) {
       if (pneuOriginalMesh) scene.remove(pneuOriginalMesh);
       if (pneuSimuladoMesh) scene.remove(pneuSimuladoMesh);
-
       pneuOriginalMesh = criarPneu(original.diametro_mm / 2, original.largura_pol * 25.4, 0x00aaff, 0.3);
-      pneuSimuladoMesh = criarPneu(simulado.diametro_mm / 2, simulado.largura_pol * 25.4, 0x222222, 1,
-        "https://threejs.org/examples/textures/brick_diffuse.jpg"); // substituir por textura realista de pneu
-
+      pneuSimuladoMesh = criarPneu(simulado.diametro_mm / 2, simulado.largura_pol * 25.4, 0x222222, 1, "https://threejs.org/examples/textures/brick_diffuse.jpg");
       scene.add(pneuOriginalMesh);
       scene.add(pneuSimuladoMesh);
-    });
+    }
 
     function animate() {
       requestAnimationFrame(animate);
@@ -95,9 +167,9 @@
     }
 
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.aspect = viewer.clientWidth / viewer.clientHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(viewer.clientWidth, viewer.clientHeight);
     });
   </script>
 </body>
