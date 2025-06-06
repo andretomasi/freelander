@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Visualizador 3D de Pneus</title>
+  <style>
+    body { margin: 0; overflow: hidden; background-color: #111; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    let scene, camera, renderer, controls;
+
+    init();
+    animate();
+
+    function init() {
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 2000);
+      camera.position.set(0, 0, 800);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+      // Luz ambiente e de direção
+      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(500, 500, 500);
+      scene.add(dirLight);
+
+      // Carregar eixo.glb
+      const loader = new THREE.GLTFLoader();
+      loader.load("https://raw.githubusercontent.com/andretomasi/freelander/main/eixo.glb", gltf => {
+        gltf.scene.position.set(0, 0, 0);
+        scene.add(gltf.scene);
+      });
+    }
+
+    function criarPneu(raio_mm, largura_mm, cor, opacidade, texturaUrl = null) {
+      const geometria = new THREE.CylinderGeometry(raio_mm, raio_mm, largura_mm, 64, 1, true);
+      let material;
+
+      if (texturaUrl) {
+        const textura = new THREE.TextureLoader().load(texturaUrl);
+        material = new THREE.MeshStandardMaterial({
+          map: textura,
+          metalness: 0.2,
+          roughness: 0.8,
+          side: THREE.DoubleSide
+        });
+      } else {
+        material = new THREE.MeshStandardMaterial({
+          color: cor,
+          transparent: opacidade < 1,
+          opacity: opacidade,
+          side: THREE.DoubleSide
+        });
+      }
+
+      const pneu = new THREE.Mesh(geometria, material);
+      pneu.rotation.x = Math.PI / 2;
+      pneu.position.set(0, 0, largura_mm / 2); // parte traseira do pneu no Z=0
+      return pneu;
+    }
+
+    let pneuOriginalMesh = null;
+    let pneuSimuladoMesh = null;
+
+    window.addEventListener("message", event => {
+      const { original, simulado } = event.data;
+
+      if (pneuOriginalMesh) scene.remove(pneuOriginalMesh);
+      if (pneuSimuladoMesh) scene.remove(pneuSimuladoMesh);
+
+      pneuOriginalMesh = criarPneu(original.diametro_mm / 2, original.largura_pol * 25.4, 0x00aaff, 0.3);
+      pneuSimuladoMesh = criarPneu(simulado.diametro_mm / 2, simulado.largura_pol * 25.4, 0x222222, 1,
+        "https://threejs.org/examples/textures/brick_diffuse.jpg"); // substituir por textura realista de pneu
+
+      scene.add(pneuOriginalMesh);
+      scene.add(pneuSimuladoMesh);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
